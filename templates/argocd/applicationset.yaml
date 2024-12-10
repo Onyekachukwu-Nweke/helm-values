@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ${name}
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+        %{~ for app in applications ~}
+          - name: ${app.name}
+            repoURL: ${app.repo_url}
+            chart: ${app.chart}
+            version: ${app.version}
+            namespace: ${app.namespace}
+            valuesPath: ${app.values_path}
+        %{~ endfor ~}
+  template:
+    metadata:
+      name: "{{name}}-${environment}"
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: "{{repoURL}}"
+        chart: "{{chart}}"
+        targetRevision: "{{version}}"
+        helm:
+          valueFiles:
+            - "{{valuesPath}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
